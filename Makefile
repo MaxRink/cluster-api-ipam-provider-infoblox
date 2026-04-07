@@ -180,7 +180,7 @@ kustomize: ## Download kustomize locally if necessary.
 ENVTEST = $(HACK_BIN)/setup-envtest
 .PHONY: envtest
 envtest: ## Download envtest-setup locally if necessary.
-	env GOBIN=$(HACK_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	env GOBIN=$(HACK_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.21
 
 GO_LICENSES = $(HACK_BIN)/go-licenses
 .PHONY: go-licenses
