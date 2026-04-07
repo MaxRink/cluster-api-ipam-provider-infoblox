@@ -43,7 +43,7 @@ type InfobloxInstanceSpec struct {
 	// Both `username`/`password` and `clientCert`/`clientKey` are supported and one of either combination is required to be present as keys in the secret.
 	//
 	// +kubebuilder:validation:Required
-	CredentialsSecretRef CredentialsReferece `json:"credentialsSecretRef,omitzero"`
+	CredentialsSecretRef CredentialsReference `json:"credentialsSecretRef,omitzero"`
 
 	// DefaultNetworkView is the default network view used when interacting with Infoblox.
 	// InfobloxIPPools will inherit this value when not explicitly specifying a network view.
@@ -71,8 +71,8 @@ type InfobloxInstanceSpec struct {
 	CustomCAPath string `json:"customCAPath,omitzero"`
 }
 
-// CredentialsReferece is a reference to a secret containing the Infoblox instance credentials.
-type CredentialsReferece struct {
+// CredentialsReference is a reference to a secret containing the Infoblox instance credentials.
+type CredentialsReference struct {
 
 	// Name of the referenced Infoblox Instance resource.
 	//

@@ -25,7 +25,7 @@ var _ = Describe("InfobloxInstance controller", func() {
 			Spec: v1alpha1.InfobloxInstanceSpec{
 				Host:        "somehost",
 				WAPIVersion: "1.2.3",
-				CredentialsSecretRef: v1alpha1.CredentialsReferece{
+				CredentialsSecretRef: v1alpha1.CredentialsReference{
 					Name: "creds",
 				},
 			},
@@ -60,7 +60,7 @@ var _ = Describe("InfobloxInstance controller", func() {
 		var secret *corev1.Secret
 
 		BeforeEach(func() {
-			instance.Spec.CredentialsSecretRef = v1alpha1.CredentialsReferece{
+			instance.Spec.CredentialsSecretRef = v1alpha1.CredentialsReference{
 				Name: "test",
 			}
 			createObj(instance)
@@ -98,7 +98,7 @@ var _ = Describe("InfobloxInstance controller", func() {
 	When("the provided credentials are invalid", func() {
 		var secret *corev1.Secret
 		BeforeEach(func() {
-			instance.Spec.CredentialsSecretRef = v1alpha1.CredentialsReferece{
+			instance.Spec.CredentialsSecretRef = v1alpha1.CredentialsReference{
 				Name: "test",
 			}
 			createObj(instance)
