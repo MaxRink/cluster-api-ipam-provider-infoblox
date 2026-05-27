@@ -15,6 +15,8 @@ type InfobloxIPPoolSpec struct {
 	// Subnets is the subnet to assign IP addresses from.
 	// Can be omitted if addresses or first, last and prefix are set.
 	//
+	// +listType=map
+	// +listMapKey=cidr
 	// +kubebuilder:validation:Required
 	Subnets []Subnet `json:"subnets,omitzero"`
 
@@ -44,24 +46,29 @@ type InstanceReference struct {
 	Name string `json:"name,omitzero"`
 }
 
-// InfobloxIPPoolStatus defines the observed state of InfobloxIPPool.
-type InfobloxIPPoolStatus struct {
-	// +kubebuilder:validation:Optional
-	Conditions []metav1.Condition `json:"conditions,omitzero"`
-}
-
 // Subnet defines the CIDR and Gateway.
 type Subnet struct {
 
 	// CIDR for the subnet.
 	//
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=43
+	// +kubebuilder:validation:Pattern=`^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$|^[0-9a-fA-F:]+/[0-9]{1,3}$`
 	CIDR string `json:"cidr,omitzero"`
 
 	// Gateway for the subnet.
 	//
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=39
+	// +kubebuilder:validation:Pattern=`^$|^([0-9]{1,3}\.){3}[0-9]{1,3}$|^[0-9a-fA-F:]+$`
 	Gateway string `json:"gateway,omitzero"`
+}
+
+// InfobloxIPPoolStatus defines the observed state of InfobloxIPPool.
+type InfobloxIPPoolStatus struct {
+	// +kubebuilder:validation:Optional
+	Conditions []metav1.Condition `json:"conditions,omitzero"`
 }
 
 // InfobloxIPPool is the Schema for the InfobloxIPPools API.
