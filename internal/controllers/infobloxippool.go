@@ -95,27 +95,29 @@ func (r *InfobloxIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	// remove finalizer if no claims point to this pool anymore
+	poolTypeRef := ipamv1.IPPoolReference{
+		APIGroup: pool.GetObjectKind().GroupVersionKind().Group,
+		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
+		Name:     pool.GetName(),
+	}
+	inUseClaims, err := poolutil.ListClaimsReferencingPool(ctx, r.Client, pool.GetNamespace(), poolTypeRef)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	pool.Status.ClaimedIPs = len(inUseClaims)
+
 	if isMarkedForDeletion {
-		poolTypeRef := ipamv1.IPPoolReference{
-			APIGroup: pool.GetObjectKind().GroupVersionKind().Group,
-			Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
-			Name:     pool.GetName(),
-		}
-		inUseClaims, err := poolutil.ListClaimsReferencingPool(ctx, r.Client, pool.GetNamespace(), poolTypeRef)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
 		for _, claim := range inUseClaims {
-			logger.Info("still found claim in use", "claim", claim.Name)
+			logger.Info("found claim still in use", "claim", claim.Name)
 		}
-		if len(inUseClaims) == 0 {
-			if controllerutil.RemoveFinalizer(pool, ProtectPoolFinalizer) {
-				return ctrl.Result{}, nil
-			}
-			return ctrl.Result{}, nil
+		if len(inUseClaims) > 0 {
+			return ctrl.Result{}, fmt.Errorf(
+				"pool has %d IPAddresses or IPAddressClaims allocated."+
+					"Cannot delete Pool until all IPAddresses and IPAddressClaims have been removed", len(inUseClaims))
 		}
-		return ctrl.Result{}, fmt.Errorf("pool has IPAddresses or IPAddressClaims allocated. Cannot delete Pool until all IPAddresses and IPAddressClaims have been removed")
+		// remove finalizer if no claims point to this pool anymore
+		controllerutil.RemoveFinalizer(pool, ProtectPoolFinalizer)
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, r.reconcile(ctx, pool)

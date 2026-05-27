@@ -27,6 +27,10 @@ spec:
       jsonPath: .spec.dnsZone
       name: DNSZone
       type: string
+    - description: The Amount of IPs claimed in the pools Subnets
+      jsonPath: .status.claimedIPs
+      name: ClaimedIPs
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -112,6 +116,8 @@ spec:
           status:
             description: InfobloxIPPoolStatus defines the observed state of InfobloxIPPool.
             properties:
+              claimedIPs:
+                type: integer
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
