@@ -70,8 +70,15 @@ type InfobloxIPPoolStatus struct {
 	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitzero"`
 
-	// +kubebuilder:validation:Optional
-	ClaimedIPs int `json:"claimedIPs,omitzero"`
+	// Addresses reports the count of allocated IPs in the pool.
+	// +optional
+	Addresses *InfobloxIPPoolStatusIPAddresses `json:"ipAddresses,omitempty"`
+}
+
+// InfobloxIPPoolStatusIPAddresses contains the count of allocated IPs in a pool.
+type InfobloxIPPoolStatusIPAddresses struct {
+	// Used is the count of allocated IPs in the pool.
+	Used int `json:"used"`
 }
 
 // InfobloxIPPool is the Schema for the InfobloxIPPools API.
@@ -81,7 +88,7 @@ type InfobloxIPPoolStatus struct {
 // +kubebuilder:printcolumn:name="Network view",type="string",JSONPath=".spec.networkView",description="Default network view"
 // +kubebuilder:printcolumn:name="Subnets",type="string",JSONPath=".spec.subnets",description="Subnets to allocate IPs from"
 // +kubebuilder:printcolumn:name="DNSZone",type="string",JSONPath=".spec.dnsZone",description="The DNS zone within which hostnames will be allocated"
-// +kubebuilder:printcolumn:name="ClaimedIPs",type="string",JSONPath=".status.claimedIPs",description="The Amount of IPs claimed in the pools Subnets"
+// +kubebuilder:printcolumn:name="Used",type="integer",JSONPath=".status.ipAddresses.used",description="Number of IPs allocated from this pool"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:printcolumn:name="Deleted",type=date,JSONPath=`.metadata.deletionTimestamp`,priority=1
 type InfobloxIPPool struct {

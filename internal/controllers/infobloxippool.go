@@ -66,8 +66,6 @@ func (r *InfobloxIPPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile an InfobloxIPPool.
 func (r *InfobloxIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, reterr error) {
-	logger := log.FromContext(ctx)
-
 	// get object
 	pool := &v1alpha1.InfobloxIPPool{}
 	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
@@ -104,18 +102,17 @@ func (r *InfobloxIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	pool.Status.ClaimedIPs = len(inUseClaims)
+	if pool.Status.Addresses == nil {
+		pool.Status.Addresses = &v1alpha1.InfobloxIPPoolStatusIPAddresses{}
+	}
+	pool.Status.Addresses.Used = len(inUseClaims)
 
 	if isMarkedForDeletion {
-		for _, claim := range inUseClaims {
-			logger.Info("found claim still in use", "claim", claim.Name)
-		}
 		if len(inUseClaims) > 0 {
 			return ctrl.Result{}, fmt.Errorf(
-				"pool has %d IPAddresses or IPAddressClaims allocated."+
+				"pool has %d IPAddresses or IPAddressClaims allocated. "+
 					"Cannot delete Pool until all IPAddresses and IPAddressClaims have been removed", len(inUseClaims))
 		}
-		// remove finalizer if no claims point to this pool anymore
 		controllerutil.RemoveFinalizer(pool, ProtectPoolFinalizer)
 		return ctrl.Result{}, nil
 	}

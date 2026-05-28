@@ -27,10 +27,10 @@ spec:
       jsonPath: .spec.dnsZone
       name: DNSZone
       type: string
-    - description: The Amount of IPs claimed in the pools Subnets
-      jsonPath: .status.claimedIPs
-      name: ClaimedIPs
-      type: string
+    - description: Number of IPs allocated from this pool
+      jsonPath: .status.ipAddresses.used
+      name: Used
+      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -116,8 +116,6 @@ spec:
           status:
             description: InfobloxIPPoolStatus defines the observed state of InfobloxIPPool.
             properties:
-              claimedIPs:
-                type: integer
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
@@ -174,6 +172,15 @@ spec:
                   - type
                   type: object
                 type: array
+              ipAddresses:
+                description: Addresses reports the count of allocated IPs in the pool.
+                properties:
+                  used:
+                    description: Used is the count of allocated IPs in the pool.
+                    type: integer
+                required:
+                - used
+                type: object
             type: object
         type: object
     served: true
