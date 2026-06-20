@@ -19,6 +19,9 @@ updates:
   - dependency-name: "sigs.k8s.io/controller-runtime"
     # We follow the minor version used in cluster-api, but can upgrade to newer patch releases independently
     update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
+  - dependency-name: "sigs.k8s.io/cluster-api-provider-vsphere"
+    # The apis/v1beta1 package used by hostname tests is not present in newer minor lines.
+    update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
   groups:
     gomega:
       patterns:
