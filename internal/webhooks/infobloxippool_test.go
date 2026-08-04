@@ -266,6 +266,101 @@ func TestInvalidScenarios(t *testing.T) {
 	}
 }
 
+func TestUnparseableCIDRIsRejectedWithoutPanicking(t *testing.T) {
+	// net.ParseCIDR returns a nil *net.IPNet when the CIDR cannot be parsed at
+	// all. The cross-family check used to dereference that nil unconditionally,
+	// so any pool with a syntactically broken CIDR panicked the webhook server
+	// instead of returning a validation error.
+	for _, cidr := range []string{"", "garbage", "10.0.0.0/33", "10.0.0.0/"} {
+		t.Run(cidr, func(t *testing.T) {
+			g := NewWithT(t)
+
+			scheme := runtime.NewScheme()
+			g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
+
+			webhook := InfobloxIPPool{
+				Client: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithIndex(&ipamv1.IPAddress{}, index.IPAddressPoolRefCombinedField, index.IPAddressByCombinedPoolRef).
+					Build(),
+			}
+
+			pool := &v1alpha1.InfobloxIPPool{
+				Spec: v1alpha1.InfobloxIPPoolSpec{
+					InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+					Subnets:     []v1alpha1.Subnet{{CIDR: cidr, Gateway: "10.0.0.1"}},
+				},
+			}
+
+			_, err := webhook.ValidateCreate(context.Background(), pool)
+			g.Expect(err).To(MatchError(ContainSubstring("is not a valid CIDR")))
+		})
+	}
+}
+
+func TestValidScenarios(t *testing.T) {
+	tests := []struct {
+		testcase string
+		spec     v1alpha1.InfobloxIPPoolSpec
+	}{
+		{
+			// Subnet.Gateway is marked Optional, so an unset gateway must be
+			// accepted. It previously produced two spurious errors: an unparseable
+			// address and a bogus mixed-address-family complaint.
+			testcase: "subnet without a gateway",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				Subnets:     []v1alpha1.Subnet{{CIDR: "10.0.0.0/24"}},
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+			},
+		},
+		{
+			testcase: "IPv4 subnet with matching gateway",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				Subnets:     []v1alpha1.Subnet{{CIDR: "10.0.0.0/24", Gateway: "10.0.0.1"}},
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+			},
+		},
+		{
+			testcase: "IPv6 subnet with matching gateway",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				Subnets:     []v1alpha1.Subnet{{CIDR: "2001:db8::/64", Gateway: "2001:db8::1"}},
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+			},
+		},
+		{
+			testcase: "dual-stack pool with one subnet per family",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				Subnets: []v1alpha1.Subnet{
+					{CIDR: "10.0.0.0/24", Gateway: "10.0.0.1"},
+					{CIDR: "2001:db8::/64", Gateway: "2001:db8::1"},
+				},
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testcase, func(t *testing.T) {
+			g := NewWithT(t)
+
+			scheme := runtime.NewScheme()
+			g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
+
+			webhook := InfobloxIPPool{
+				Client: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithIndex(&ipamv1.IPAddress{}, index.IPAddressPoolRefCombinedField, index.IPAddressByCombinedPoolRef).
+					Build(),
+			}
+
+			pool := &v1alpha1.InfobloxIPPool{Spec: tt.spec}
+
+			g.Expect(testCreate(context.Background(), pool, &webhook)).To(Succeed())
+			g.Expect(testUpdate(context.Background(), pool, &webhook)).To(Succeed())
+		})
+	}
+}
+
 func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool *v1alpha1.InfobloxIPPool, webhook InfobloxIPPool) {
 	t.Helper()
 	t.Run(tt.testcase, func(t *testing.T) {

@@ -46,8 +46,8 @@ func (webhook *InfobloxIPPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-ipam-cluster-x-k8s-io-v1alpha1-infobloxippool,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=ipam.cluster.x-k8s.io,resources=infobloxippools,versions=v1alpha2,name=validation.infobloxippool.ipam.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
-// +kubebuilder:webhook:verbs=create;update,path=/mutate-ipam-cluster-x-k8s-io-v1alpha1-infobloxippool,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=ipam.cluster.x-k8s.io,resources=infobloxippools,versions=v1alpha2,name=default.infobloxippool.ipam.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-ipam-cluster-x-k8s-io-v1alpha1-infobloxippool,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=ipam.cluster.x-k8s.io,resources=infobloxippools,versions=v1alpha1,name=validation.infobloxippool.ipam.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+// +kubebuilder:webhook:verbs=create;update,path=/mutate-ipam-cluster-x-k8s-io-v1alpha1-infobloxippool,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=ipam.cluster.x-k8s.io,resources=infobloxippools,versions=v1alpha1,name=default.infobloxippool.ipam.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 // InfobloxIPPool implements a validating and defaulting webhook for InfobloxIPPool.
 type InfobloxIPPool struct {
@@ -125,16 +125,30 @@ func (webhook *InfobloxIPPool) validate(newPool *v1alpha1.InfobloxIPPool) (reter
 				newPool.Spec.Subnets[i].CIDR, subnetPath(i)+".CIDR is not a valid CIDR"))
 		}
 
-		gatewayIP, err := netip.ParseAddr(subnet.Gateway)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", subnetPath(i), "Gateway"),
-				newPool.Spec.Subnets[i].Gateway, subnetPath(i)+".Gateway is not a valid IP address"+" "+err.Error()))
+		// net.ParseCIDR returns a nil network on error, so there is nothing left
+		// to cross-check for this subnet.
+		if network == nil {
+			continue
 		}
 
 		networkIP, err := netip.ParseAddr(network.IP.String())
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", subnetPath(i), "CIDR"),
 				newPool.Spec.Subnets[i].CIDR, subnetPath(i)+".CIDR could not be parsed"))
+			continue
+		}
+
+		// Gateway is an optional field: an unset gateway is valid and simply
+		// means no gateway is propagated to the allocated IPAddress.
+		if subnet.Gateway == "" {
+			continue
+		}
+
+		gatewayIP, err := netip.ParseAddr(subnet.Gateway)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", subnetPath(i), "Gateway"),
+				newPool.Spec.Subnets[i].Gateway, subnetPath(i)+".Gateway is not a valid IP address"+" "+err.Error()))
+			continue
 		}
 
 		ipVersionsMatched := (networkIP.Is4() && gatewayIP.Is4()) || (networkIP.Is6() && gatewayIP.Is6())
