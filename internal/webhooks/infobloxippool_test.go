@@ -298,6 +298,88 @@ func TestUnparseableCIDRIsRejectedWithoutPanicking(t *testing.T) {
 	}
 }
 
+func TestUpdateOfPoolMarkedForDeletionSkipsSpecValidation(t *testing.T) {
+	// This webhook was inert in-cluster for the provider's entire deployed life
+	// (the markers selected a nonexistent apiVersion), so pools that violate these
+	// rules are already persisted in real clusters. Every pool also carries
+	// ProtectPoolFinalizer, and the controller finishes a deletion by *updating* the
+	// pool to drop that finalizer. If spec validation ran on those updates, the
+	// rejection would deadlock deletion and strand the pool in Terminating forever.
+	scheme := runtime.NewScheme()
+	g := NewWithT(t)
+	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
+
+	deletionTime := metav1.Now()
+
+	for _, tt := range []struct {
+		testcase string
+		spec     v1alpha1.InfobloxIPPoolSpec
+	}{
+		{
+			testcase: "non-canonical CIDR",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+				Subnets:     []v1alpha1.Subnet{{CIDR: "10.0.0.3/30", Gateway: "10.0.0.1"}},
+			},
+		},
+		{
+			testcase: "empty subnets",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+				Subnets:     []v1alpha1.Subnet{},
+			},
+		},
+		{
+			testcase: "mismatched address families",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				InstanceRef: v1alpha1.InstanceReference{Name: "test-instance"},
+				Subnets:     []v1alpha1.Subnet{{CIDR: "10.0.0.0/24", Gateway: "2001:db8::1"}},
+			},
+		},
+		{
+			testcase: "missing instance ref",
+			spec: v1alpha1.InfobloxIPPoolSpec{
+				Subnets: []v1alpha1.Subnet{{CIDR: "10.0.0.0/24", Gateway: "10.0.0.1"}},
+			},
+		},
+	} {
+		t.Run(tt.testcase, func(t *testing.T) {
+			g := NewWithT(t)
+
+			webhook := InfobloxIPPool{
+				Client: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithIndex(&ipamv1.IPAddress{}, index.IPAddressPoolRefCombinedField, index.IPAddressByCombinedPoolRef).
+					Build(),
+			}
+
+			pool := &v1alpha1.InfobloxIPPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "legacy-pool",
+					Namespace:  "test-namespace",
+					Finalizers: []string{"ipam.cluster.x-k8s.io/ProtectPool"},
+				},
+				Spec: tt.spec,
+			}
+
+			// Sanity check: while the pool is live, the spec really is rejected.
+			_, err := webhook.ValidateUpdate(context.Background(), pool.DeepCopy(), pool.DeepCopy())
+			g.Expect(err).To(HaveOccurred(), "invalid spec must still be rejected on a live pool")
+
+			// Once marked for deletion, the controller must be able to drop the
+			// finalizer so the deletion can complete.
+			terminating := pool.DeepCopy()
+			terminating.DeletionTimestamp = &deletionTime
+			finalizerRemoved := terminating.DeepCopy()
+			finalizerRemoved.Finalizers = nil
+
+			_, err = webhook.ValidateUpdate(context.Background(), terminating, finalizerRemoved)
+			g.Expect(err).ToNot(HaveOccurred(),
+				"a pool marked for deletion must accept the finalizer-removing update, otherwise deletion deadlocks")
+		})
+	}
+}
+
 func TestValidScenarios(t *testing.T) {
 	tests := []struct {
 		testcase string

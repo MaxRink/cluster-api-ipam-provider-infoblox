@@ -69,6 +69,17 @@ func (webhook *InfobloxIPPool) ValidateCreate(_ context.Context, pool *v1alpha1.
 
 // ValidateUpdate implements admission.Validator so a webhook will be registered for the type.
 func (webhook *InfobloxIPPool) ValidateUpdate(_ context.Context, _, newPool *v1alpha1.InfobloxIPPool) (admission.Warnings, error) {
+	// Once the pool is marked for deletion, its spec is no longer actionable: the only
+	// updates left are the controller removing ProtectPoolFinalizer and metadata edits
+	// that let the deletion finish. Rejecting those on spec grounds would deadlock
+	// deletion, leaving the pool in Terminating forever with no way out short of
+	// manually stripping the finalizer as cluster-admin. That matters because this
+	// webhook was inert for the provider's entire deployed life, so pools that are
+	// invalid under these rules are already persisted in real clusters.
+	if !newPool.GetDeletionTimestamp().IsZero() {
+		return nil, nil
+	}
+
 	err := webhook.validate(newPool)
 	if err != nil {
 		return nil, err
