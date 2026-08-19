@@ -109,7 +109,7 @@ func TestWebhookConfigurationIsWiredToAPIServer(t *testing.T) {
 	})
 	g.Expect(err).NotTo(HaveOccurred())
 
-	g.Expect(index.SetupIndexes(testCtx, mgr)).To(Succeed())
+	g.Expect(index.SetupIndexes(testCtx, mgr.GetFieldIndexer())).To(Succeed())
 
 	recorder := &recordingInfobloxIPPool{InfobloxIPPool: &InfobloxIPPool{Client: mgr.GetClient()}}
 	g.Expect(
