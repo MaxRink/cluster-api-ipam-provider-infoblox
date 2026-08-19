@@ -207,7 +207,10 @@ func TestWebhookConfigurationIsWiredToAPIServer(t *testing.T) {
 			_ = k8sClient.Delete(testCtx, pool)
 		})
 
-		pool.Spec.Subnets = []v1alpha1.Subnet{{CIDR: "not-a-cidr", Gateway: "10.20.0.1"}}
+		// Keep the value valid against the CRD's broad CIDR pattern so the request
+		// reaches the validating webhook instead of being rejected by the API server
+		// before admission. The webhook enforces canonical network notation.
+		pool.Spec.Subnets = []v1alpha1.Subnet{{CIDR: "10.20.0.3/24", Gateway: "10.20.0.1"}}
 		err := k8sClient.Update(testCtx, pool)
 		g.Expect(err).To(HaveOccurred(), "API server must reject an invalid update; if this passes the webhook is not wired up")
 		g.Expect(err.Error()).To(ContainSubstring("is not a valid CIDR"))
