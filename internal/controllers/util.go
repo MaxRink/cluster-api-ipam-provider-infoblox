@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/pkg/infoblox"
@@ -19,8 +18,8 @@ import (
 
 // markFailedInfobloxRequest sets the `Ready` condition to the provided Setter for a failed infoblox request.
 //
-// If an error is provided the condition reason will be the generic
-// `InfobloxCheckFailedReason` and the error will be wrapped with the `subject` and returned.
+// If an error is provided the condition reason will identify a connection failure or use the
+// generic `InfobloxCheckFailedReason`; the error will be wrapped with the `subject` and returned.
 //
 // If no error is provided the condition will be set to the provided
 // `notFoundReason` instead and no error (nil) will be returned.
@@ -62,8 +61,7 @@ func isNetworkError(err error) bool {
 	if errors.As(err, &netErr) {
 		return true
 	}
-	var urlErr *url.Error
-	return errors.As(err, &urlErr)
+	return false
 }
 
 // GetInfobloxClientForInstance returns an Infoblox client for the named InfobloxInstance, built

@@ -176,16 +176,12 @@ func (c *client) CheckNetworkExists(view string, subnet netip.Prefix) (bool, err
 }
 
 func (c *client) requestError(operation string, err error) error {
-	scheme := "https"
-	if c.hc.DisableTLSVerification {
-		scheme = "https"
-	}
 	port := c.hc.Port
 	if port == "" {
 		port = "443"
 	}
 	return &RequestError{
-		Endpoint:  (&url.URL{Scheme: scheme, Host: c.hc.Host + ":" + port}).String(),
+		Endpoint:  (&url.URL{Scheme: "https", Host: c.hc.Host + ":" + port}).String(),
 		Operation: operation,
 		Err:       err,
 	}
