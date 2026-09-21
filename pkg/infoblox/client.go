@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"net/url"
 	"strings"
 	"time"
 
@@ -64,6 +65,21 @@ type HostConfig struct {
 	CustomCAPath           string
 	DefaultNetworkView     string
 	DefaultDNSView         string
+}
+
+// RequestError adds the Infoblox endpoint and operation to an API request error.
+type RequestError struct {
+	Endpoint  string
+	Operation string
+	Err       error
+}
+
+func (e *RequestError) Error() string {
+	return fmt.Sprintf("Infoblox request failed: operation %s at %s: %v", e.Operation, e.Endpoint, e.Err)
+}
+
+func (e *RequestError) Unwrap() error {
+	return e.Err
 }
 
 // Config is a wrapper config structures.
@@ -132,7 +148,7 @@ func (c *client) CheckNetworkViewExists(view string) (bool, error) {
 		if isNotFound(err) {
 			return false, nil
 		}
-		return false, err
+		return false, c.requestError(fmt.Sprintf("check network view %q", view), err)
 	}
 	return true, nil
 }
@@ -143,7 +159,7 @@ func (c *client) CheckDNSViewExists(view string) (bool, error) {
 		if isNotFound(err) {
 			return false, nil
 		}
-		return false, err
+		return false, c.requestError(fmt.Sprintf("check DNS view %q", view), err)
 	}
 	return true, nil
 }
@@ -154,9 +170,25 @@ func (c *client) CheckNetworkExists(view string, subnet netip.Prefix) (bool, err
 		if isNotFound(err) {
 			return false, nil
 		}
-		return false, err
+		return false, c.requestError(fmt.Sprintf("check network %s in view %q", subnet, view), err)
 	}
 	return true, nil
+}
+
+func (c *client) requestError(operation string, err error) error {
+	scheme := "https"
+	if c.hc.DisableTLSVerification {
+		scheme = "https"
+	}
+	port := c.hc.Port
+	if port == "" {
+		port = "443"
+	}
+	return &RequestError{
+		Endpoint:  (&url.URL{Scheme: scheme, Host: c.hc.Host + ":" + port}).String(),
+		Operation: operation,
+		Err:       err,
+	}
 }
 
 func (c *client) GetHostConfig() *HostConfig {

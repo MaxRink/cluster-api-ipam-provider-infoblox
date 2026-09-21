@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"errors"
+	"net"
+	"net/url"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -206,6 +208,19 @@ var _ = Describe("InfobloxInstanceReconciler", func() {
 
 			expectFailedCondition("infoblox said no", v1alpha1.InfobloxCheckFailedReason,
 				`could not check default network view "instance-view"`)
+		})
+
+		It("should classify a transport failure with endpoint and operation context", func() {
+			instanceMock.EXPECT().CheckNetworkViewExists("instance-view").
+				Return(false, &infoblox.RequestError{
+					Endpoint:  "https://infoblox.example:443",
+					Operation: "check network view \"instance-view\"",
+					Err:       &url.Error{Op: "dial", URL: "https://infoblox.example:443", Err: &net.DNSError{Err: "no such host", Name: "infoblox.example"}},
+				}).Times(1)
+			createObj(instance)
+
+			expectFailedCondition("network failure", v1alpha1.InfobloxConnectionFailedReason,
+				`network failure during check network view "instance-view" at https://infoblox.example:443`)
 		})
 
 		It("should set the instance to ready if the view exists", func() {

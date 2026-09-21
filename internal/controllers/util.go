@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"net/url"
 
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/pkg/infoblox"
@@ -23,6 +26,16 @@ import (
 // `notFoundReason` instead and no error (nil) will be returned.
 func markFailedInfobloxRequest(obj conditions.Setter, err error, notFoundReason, subject string) error {
 	if err != nil {
+		var requestErr *infoblox.RequestError
+		if errors.As(err, &requestErr) && isNetworkError(requestErr.Err) {
+			conditions.Set(obj, metav1.Condition{
+				Type:    clusterv1.ReadyCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.InfobloxConnectionFailedReason,
+				Message: fmt.Sprintf("network failure during %s at %s: %v", requestErr.Operation, requestErr.Endpoint, requestErr.Err),
+			})
+			return fmt.Errorf("failed due to network failure during %s at %s: %w", requestErr.Operation, requestErr.Endpoint, requestErr.Err)
+		}
 		conditions.Set(obj, metav1.Condition{
 			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
@@ -39,6 +52,18 @@ func markFailedInfobloxRequest(obj conditions.Setter, err error, notFoundReason,
 		Message: fmt.Sprintf("could not find %s", subject),
 	})
 	return nil
+}
+
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	var urlErr *url.Error
+	return errors.As(err, &urlErr)
 }
 
 // GetInfobloxClientForInstance returns an Infoblox client for the named InfobloxInstance, built
