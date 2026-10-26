@@ -23,7 +23,6 @@ package v1alpha1
 // InstanceReference is a reference to an infoblox instance resource.
 type InstanceReferenceApplyConfiguration struct {
 	// Name of the referenced Infoblox Instance resource.
-	//
 	Name *string `json:"name,omitempty"`
 }
 

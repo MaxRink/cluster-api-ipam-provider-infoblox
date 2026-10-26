@@ -5,12 +5,11 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/runtime"
-	smdschema "sigs.k8s.io/structured-merge-diff/v6/schema"
-
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/api/applyconfiguration"
 	"github.com/telekom/cluster-api-ipam-provider-infoblox/api/applyconfiguration/internal"
 	api "github.com/telekom/cluster-api-ipam-provider-infoblox/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	smdschema "sigs.k8s.io/structured-merge-diff/v6/schema"
 )
 
 func TestForKindCoversRootKinds(t *testing.T) {
@@ -52,7 +51,7 @@ func TestSchemaReferencesResolve(t *testing.T) {
 	for _, def := range schema.Types {
 		if def.Map != nil {
 			check(def.Name, def.Map.ElementType)
-			for _, field := range def.Map.Fields {
+			for _, field := range def.Fields {
 				check(def.Name+"."+field.Name, field.Type)
 			}
 		}

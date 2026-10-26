@@ -23,20 +23,15 @@ package v1alpha1
 // InfobloxIPPoolSpec defines the desired state of InfobloxIPPool.
 type InfobloxIPPoolSpecApplyConfiguration struct {
 	// Instance is the Infoblox instance to use.
-	//
 	InstanceRef *InstanceReferenceApplyConfiguration `json:"instance,omitempty"`
 	// Subnets is the subnet to assign IP addresses from.
 	// Can be omitted if addresses or first, last and prefix are set.
-	//
 	Subnets []SubnetApplyConfiguration `json:"subnets,omitempty"`
 	// NetworkView defines Infoblox netwok view to be used with pool.
-	//
 	NetworkView *string `json:"networkView,omitempty"`
 	// DNSView defines Infoblox DNS view to be used with pool.
-	//
 	DNSView *string `json:"dnsView,omitempty"`
 	// DNSZone is the DNS zone within which hostnames will be allocated.
-	//
 	DNSZone *string `json:"dnsZone,omitempty"`
 }
 

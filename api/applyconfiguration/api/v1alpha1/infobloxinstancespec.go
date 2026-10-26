@@ -23,32 +23,24 @@ package v1alpha1
 // InfobloxInstanceSpec defines the desired state of InfobloxInstance.
 type InfobloxInstanceSpecApplyConfiguration struct {
 	// Endpoint is the API endpoint of the Infoblox instance.
-	//
 	Host *string `json:"host,omitempty"`
 	// Port to use when connecting to the Infoblox instance.
-	//
 	Port *string `json:"port,omitempty"`
 	// WAPIVersion is the version of the Infoblox Web-based Application Programming Interface (WAPI) endoint.
-	//
 	WAPIVersion *string `json:"wapiVersion,omitempty"`
 	// CredentialsSecretRef is a reference to a secret containing the username and password to be used for authentication.
 	// Both `username`/`password` and `clientCert`/`clientKey` are supported and one of either combination is required to be present as keys in the secret.
-	//
 	CredentialsSecretRef *CredentialsRefereceApplyConfiguration `json:"credentialsSecretRef,omitempty"`
 	// DefaultNetworkView is the default network view used when interacting with Infoblox.
 	// InfobloxIPPools will inherit this value when not explicitly specifying a network view.
-	//
 	DefaultNetworkView *string `json:"defaultNetworkView,omitempty"`
 	// DefaultDNSView is the default DNS view used when interacting with Infoblox.
 	// InfobloxIPPools will inherit this value when not explicitly specifying a DNS view.
-	//
 	DefaultDNSView *string `json:"defaultDNSView,omitempty"`
 	// DisableTLSVerification if set 'true', certificates for SSL commuunication with Infoblox instance will be not verified
-	//
 	DisableTLSVerification *bool `json:"disableTLSVerification,omitempty"`
 	// CustomCAPath can be used to point Infoblox client to a file with a list of accepted certificate authorities.
 	// Only used if DisableTLSVerification is set to 'false'.
-	//
 	CustomCAPath *string `json:"customCAPath,omitempty"`
 }
 

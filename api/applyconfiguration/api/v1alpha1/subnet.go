@@ -23,10 +23,8 @@ package v1alpha1
 // Subnet defines the CIDR and Gateway.
 type SubnetApplyConfiguration struct {
 	// CIDR for the subnet.
-	//
 	CIDR *string `json:"cidr,omitempty"`
 	// Gateway for the subnet.
-	//
 	Gateway *string `json:"gateway,omitempty"`
 }
 

@@ -23,7 +23,6 @@ package v1alpha1
 // CredentialsReferece is a reference to a secret containing the Infoblox instance credentials.
 type CredentialsRefereceApplyConfiguration struct {
 	// Name of the referenced Infoblox Instance resource.
-	//
 	Name *string `json:"name,omitempty"`
 }
 
