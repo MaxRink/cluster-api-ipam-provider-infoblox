@@ -194,11 +194,6 @@ func (h *InfobloxClaimHandler) FetchPool(ctx context.Context) (_ client.Object, 
 		return h.pool, &ctrl.Result{}, nil
 	}
 
-	// Readiness describes whether the pool can hand out new addresses. It says nothing about
-	// whether an address already taken from it can be released. So the gate applies to allocation only.
-	//
-	// An absent condition counts as not ready: a pool that has never been reconciled has not been
-	// validated against Infoblox, and its network view, DNS view and subnets may not exist.
 	// Block new allocations against a pool being deleted, but still allow existing
 	// claims to be cleaned up (ReleaseAddress still needs to run for them).
 	if !h.pool.GetDeletionTimestamp().IsZero() && h.claim.GetDeletionTimestamp().IsZero() {
@@ -211,9 +206,13 @@ func (h *InfobloxClaimHandler) FetchPool(ctx context.Context) (_ client.Object, 
 		return h.pool, nil, fmt.Errorf("pool is being deleted")
 	}
 
-	// Block new allocations against unready pools, but allow deleting claims to
-	// proceed so ReleaseAddress can clean up allocations during pool deletion.
-	if h.claim.GetDeletionTimestamp().IsZero() && !conditions.IsTrue(h.pool, clusterv1.ReadyCondition) {
+	// Readiness describes whether the pool can hand out new addresses. It says nothing about
+	// whether an address already taken from it can be released. So the gate applies to allocation only.
+	//
+	// An absent condition counts as not ready: a pool that has never been reconciled has not been
+	// validated against Infoblox, and its network view, DNS view and subnets may not exist.
+	if h.claim.GetDeletionTimestamp().IsZero() &&
+		!conditions.IsTrue(h.pool, clusterv1.ReadyCondition) {
 		message := "the referenced pool is not ready"
 		if conditions.Get(h.pool, clusterv1.ReadyCondition) == nil {
 			message = "the referenced pool does not have a Ready condition"
@@ -317,7 +316,9 @@ func (h *InfobloxClaimHandler) EnsureAddress(ctx context.Context, address *ipamv
 	return nil, err
 }
 
-// ReleaseAddress releases address.
+// ReleaseAddress releases the address the claim holds back to Infoblox.
+//
+// What has to be released is described by the IPAddress resource belonging to the claim.
 func (h *InfobloxClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -360,6 +361,7 @@ func (h *InfobloxClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Result
 	if err != nil {
 		return nil, err
 	}
+
 	if err := h.ibclient.ReleaseAddress(networkView, dnsView, subnet, hostName, logger); err != nil {
 		return nil, h.releaseFailed(fmt.Errorf("failed to release address %q: %w", address.Spec.Address, err))
 	}
