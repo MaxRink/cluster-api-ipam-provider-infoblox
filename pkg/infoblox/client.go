@@ -48,9 +48,9 @@ type client struct {
 var _ Client = &client{}
 
 // AuthConfig contains authentication parameters to use for authenticating against the API.
-// Fields are tagged with json:"-" to prevent accidental serialization of credentials into logs or API responses.
+// Credential fields are tagged with json:"-" to prevent accidental serialization into logs or API responses.
 type AuthConfig struct {
-	Username   string `json:"-"`
+	Username   string
 	Password   string `json:"-"`
 	ClientCert []byte `json:"-"`
 	ClientKey  []byte `json:"-"`
